@@ -1,0 +1,32 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+venv/
+env/
+build/
+dist/
+*.spec
+
+# --- Playwright (Evita subir los navegadores instalados) ---
+browsers/
+.playwright/
+
+# --- Archivos de Datos (Solo ignoramos los resultados, NO las bases de datos maestras si son necesarias) ---
+# Ignorar resultados de salida para no ensuciar el repo
+Resultado.xlsx
+Resultado_Parcial.xlsx
+Resultado_Interrumpido.xlsx
+PRODUCTOS.xlsx
+
+# Si tus carpetas de bases de datos contienen info sensible o muy pesada, descomenta la siguiente línea:
+TIENDAS/*.xlsx
+
+# --- Temporales de Office ---
+~$*.xlsx
+*.log
+
+# --- OS ---
+.DS_Store
+Thumbs.db
