@@ -733,32 +733,40 @@ class EasyFindApp:
             >>> # ... operación en progreso ...
             >>> self._reset_ui(None)  # Volver a estado idle
         """
-        if running_title:
-            # Modo Ejecución: preparar UI para operación
-            self.text_area.configure(state='normal')
-            self.text_area.delete('1.0', tk.END)
-            self.text_area.configure(state='disabled')
-            
-            # Limpiar widgets de bots anteriores
-            for w in self.active_bot_widgets.values(): 
-                w["frame"].destroy()
-            self.active_bot_widgets.clear()
-            
-            # Deshabilitar botones de acción
-            self.btn_iniciar.config(state="disabled", bg="#cccccc")
-            self.btn_actualizar.config(state="disabled", bg="#cccccc")
-            # Habilitar botón detener
-            self.btn_detener.config(state="normal", bg="#dc3545", text="DETENER")
-            self.stop_event.clear()
-            self.log(f"--- INICIANDO: {running_title} ---")
-        else:
-            # Modo Idle: restaurar UI a estado inicial
-            self.btn_iniciar.config(state="normal", bg="#007bff")
-            self.btn_actualizar.config(state="normal", bg="#28a745")
-            self.btn_detener.config(state="disabled")
-            self.lbl_progreso.config(text="Esperando orden...")
-            self.progress_bar['value'] = 0
-            self.log("--- PROCESO FINALIZADO ---")
+        try:
+            if running_title:
+                # Modo Ejecución: preparar UI para operación
+                self.text_area.configure(state='normal')
+                self.text_area.delete('1.0', tk.END)
+                self.text_area.configure(state='disabled')
+                
+                # Limpiar widgets de bots anteriores
+                for w in self.active_bot_widgets.values(): 
+                    try:
+                        w["frame"].destroy()
+                    except:
+                        pass  # Ignorar si el widget ya fue destruido
+                self.active_bot_widgets.clear()
+                
+                # Deshabilitar botones de acción
+                self.btn_iniciar.config(state="disabled", bg="#cccccc")
+                self.btn_actualizar.config(state="disabled", bg="#cccccc")
+                # Habilitar botón detener
+                self.btn_detener.config(state="normal", bg="#dc3545", text="DETENER")
+                self.stop_event.clear()
+                self.log(f"--- INICIANDO: {running_title} ---")
+            else:
+                # Modo Idle: restaurar UI a estado inicial
+                self.btn_iniciar.config(state="normal", bg="#007bff")
+                self.btn_actualizar.config(state="normal", bg="#28a745")
+                self.btn_detener.config(state="disabled")
+                self.lbl_progreso.config(text="Esperando orden...")
+                self.progress_bar['value'] = 0
+                self.log("--- PROCESO FINALIZADO ---")
+        except Exception as e:
+            # Capturar errores para prevenir fallos críticos en ejecutables
+            print(f"Error en _reset_ui: {e}")
+
 
     # --- ACCIONES ---
     def action_start_search(self):
@@ -848,13 +856,13 @@ class EasyFindApp:
         
         Note:
             - Muestra diálogo de confirmación antes de proceder
-            - La detención se ejecuta en un thread separado
+            - La detención se ejecuta en un thread daemon separado
             - Deshabilita el botón inmediatamente para evitar clics múltiples
         """
         if messagebox.askyesno("Stop", "¿Detener proceso forzosamente?"):
             self.log("DETENIENDO...")
             self.btn_detener.config(state="disabled")
-            threading.Thread(target=self._force_stop_logic).start()
+            threading.Thread(target=self._force_stop_logic, daemon=True).start()
 
     def _force_stop_logic(self):
         """Lógica de detención forzada de procesos.
@@ -867,16 +875,30 @@ class EasyFindApp:
             5. Resetea la UI a estado idle
         
         Note:
-            - Se ejecuta en un thread separado para no bloquear la UI
+            - Se ejecuta en un thread daemon separado para no bloquear la UI
             - Usa root.after(0, ...) para resetear UI en el thread principal
+            - Maneja errores para prevenir fallos críticos en ejecutables
         """
-        self.stop_event.set()
-        killed = self.bot_manager.kill_all()
-        if killed: 
-            self.log(f"{killed} procesos eliminados.")
-        time.sleep(1)
-        # Resetear UI en el thread principal
-        self.root.after(0, lambda: self._reset_ui(None))
+        try:
+            self.stop_event.set()
+            killed = self.bot_manager.kill_all()
+            if killed: 
+                self.log(f"{killed} procesos eliminados.")
+            time.sleep(1)
+            # Resetear UI en el thread principal de forma segura
+            try:
+                self.root.after(0, lambda: self._reset_ui(None))
+            except Exception as e:
+                # Si falla el after, intentar resetear directamente
+                print(f"Warning: No se pudo resetear UI via after: {e}")
+                self._reset_ui(None)
+        except Exception as e:
+            # Capturar cualquier error crítico para evitar crash del ejecutable
+            print(f"Error en _force_stop_logic: {e}")
+            try:
+                self.log(f"Error al detener: {e}")
+            except:
+                pass
 
     def _on_search_finished(self, error):
         """Callback cuando finaliza la búsqueda de precios.
