@@ -168,16 +168,21 @@ class BotManager:
         """
         self.queue.put(("LOG", msg))
 
-    def run_update_logic(self):
+    def run_update_logic(self, selected_bots=None):
         """Ejecuta múltiples bots recolectores en paralelo.
         
         Este método es el punto de entrada principal para la actualización de
         bases de datos. Busca todos los scripts de bots en la carpeta designada
         y los ejecuta en paralelo usando un ThreadPoolExecutor.
         
+        Args:
+            selected_bots (list, optional): Lista de rutas de archivos de bots
+                a ejecutar. Si es None, ejecuta todos los bots encontrados.
+        
         Flujo de ejecución:
             1. Previene suspensión del sistema
             2. Busca scripts Bot-recolector-*.py en carpeta Bots_recolectores
+               (o usa la lista proporcionada en selected_bots)
             3. Ejecuta hasta 4 bots simultáneamente
             4. Monitorea progreso y maneja señales de detención
             5. Restaura configuración de energía al finalizar
@@ -193,12 +198,16 @@ class BotManager:
         """
         SystemUtils.toggle_sleep_prevention(True)
         try:
-            carpeta_bots = "Bots_recolectores"
-            patron = os.path.join(carpeta_bots, "Bot-recolector-*.py")
-            archivos_bots = glob.glob(patron)
+            # Si no se proporcionan bots seleccionados, buscar todos
+            if selected_bots is None:
+                carpeta_bots = "Bots_recolectores"
+                patron = os.path.join(carpeta_bots, "Bot-recolector-*.py")
+                archivos_bots = glob.glob(patron)
+            else:
+                archivos_bots = selected_bots
             
             if not archivos_bots:
-                self.log(f"❌ No se encontraron bots en '{carpeta_bots}'.")
+                self.log(f"❌ No se encontraron bots para ejecutar.")
                 self.queue.put(("FIN_ACTUALIZACION", None))
                 return
 
@@ -347,6 +356,210 @@ class BotManager:
             if SystemUtils.kill_process_tree(proc.pid):
                 count += 1
         return count
+
+# =============================================================================
+# CLASE 2: DIÁLOGO DE SELECCIÓN DE TIENDAS
+# =============================================================================
+class StoreSelectionDialog(tk.Toplevel):
+    """Diálogo modal para seleccionar tiendas a actualizar.
+    
+    Permite al usuario elegir qué bots recolectores ejecutar mediante
+    checkboxes, evitando la necesidad de actualizar todas las tiendas.
+    
+    Attributes:
+        result (list): Lista de rutas de archivos de bots seleccionados.
+        checkboxes (dict): Mapeo de nombre_bot -> tk.BooleanVar.
+        bot_files (list): Lista de rutas completas de archivos de bots.
+    """
+    
+    def __init__(self, parent, bot_files):
+        """Inicializa el diálogo de selección.
+        
+        Args:
+            parent: Ventana padre (Tkinter root o Toplevel).
+            bot_files (list): Lista de rutas completas a archivos de bots.
+        """
+        super().__init__(parent)
+        self.title("Seleccionar Tiendas a Actualizar")
+        self.geometry("500x600")
+        self.resizable(False, False)
+        
+        # Centrar ventana
+        self.transient(parent)
+        self.grab_set()
+        
+        self.bot_files = bot_files
+        self.result = None
+        self.checkboxes = {}
+        
+        self._build_ui()
+        
+    def _build_ui(self):
+        """Construye la interfaz del diálogo."""
+        # Header
+        header_frame = tk.Frame(self, bg="#f8f9fa", pady=15)
+        header_frame.pack(fill=tk.X)
+        tk.Label(
+            header_frame, 
+            text="🏪 Selecciona las tiendas a actualizar",
+            font=("Segoe UI", 14, "bold"),
+            bg="#f8f9fa",
+            fg="#333"
+        ).pack()
+        tk.Label(
+            header_frame,
+            text="Marca las tiendas que deseas actualizar",
+            font=("Segoe UI", 9),
+            bg="#f8f9fa",
+            fg="#666"
+        ).pack()
+        
+        # Botones de selección rápida
+        btn_frame = tk.Frame(self, pady=10)
+        btn_frame.pack(fill=tk.X, padx=20)
+        
+        tk.Button(
+            btn_frame,
+            text="✓ Seleccionar Todas",
+            command=self._select_all,
+            bg="#28a745",
+            fg="white",
+            font=("Segoe UI", 9),
+            relief=tk.FLAT,
+            padx=10,
+            pady=5
+        ).pack(side=tk.LEFT, padx=5)
+        
+        tk.Button(
+            btn_frame,
+            text="✗ Deseleccionar Todas",
+            command=self._deselect_all,
+            bg="#dc3545",
+            fg="white",
+            font=("Segoe UI", 9),
+            relief=tk.FLAT,
+            padx=10,
+            pady=5
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # Área scrollable con checkboxes
+        canvas_frame = tk.Frame(self)
+        canvas_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        
+        canvas = tk.Canvas(canvas_frame, bg="white", highlightthickness=1, highlightbackground="#ddd")
+        scrollbar = tk.Scrollbar(canvas_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg="white")
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Crear checkboxes para cada bot
+        for bot_file in sorted(self.bot_files):
+            bot_name = os.path.basename(bot_file).replace("Bot-recolector-", "").replace(".py", "")
+            
+            var = tk.BooleanVar(value=True)  # Seleccionados por defecto
+            self.checkboxes[bot_file] = var
+            
+            cb_frame = tk.Frame(scrollable_frame, bg="white", pady=5)
+            cb_frame.pack(fill=tk.X, padx=10)
+            
+            cb = tk.Checkbutton(
+                cb_frame,
+                text=bot_name,
+                variable=var,
+                font=("Segoe UI", 10),
+                bg="white",
+                activebackground="white",
+                anchor="w"
+            )
+            cb.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Contador de seleccionados
+        self.count_label = tk.Label(
+            self,
+            text=self._get_count_text(),
+            font=("Segoe UI", 9),
+            fg="#666"
+        )
+        self.count_label.pack(pady=5)
+        
+        # Actualizar contador cuando cambian los checkboxes
+        for var in self.checkboxes.values():
+            var.trace_add("write", lambda *args: self._update_count())
+        
+        # Botones de acción
+        action_frame = tk.Frame(self, pady=15)
+        action_frame.pack(fill=tk.X, padx=20)
+        
+        tk.Button(
+            action_frame,
+            text="Aceptar",
+            command=self._on_accept,
+            bg="#007bff",
+            fg="white",
+            font=("Segoe UI", 10, "bold"),
+            width=15,
+            height=2
+        ).pack(side=tk.LEFT, padx=5, expand=True)
+        
+        tk.Button(
+            action_frame,
+            text="Cancelar",
+            command=self._on_cancel,
+            bg="#6c757d",
+            fg="white",
+            font=("Segoe UI", 10, "bold"),
+            width=15,
+            height=2
+        ).pack(side=tk.LEFT, padx=5, expand=True)
+    
+    def _select_all(self):
+        """Selecciona todos los checkboxes."""
+        for var in self.checkboxes.values():
+            var.set(True)
+    
+    def _deselect_all(self):
+        """Deselecciona todos los checkboxes."""
+        for var in self.checkboxes.values():
+            var.set(False)
+    
+    def _get_count_text(self):
+        """Obtiene el texto del contador de seleccionados."""
+        selected = sum(1 for var in self.checkboxes.values() if var.get())
+        total = len(self.checkboxes)
+        return f"Seleccionadas: {selected} de {total} tiendas"
+    
+    def _update_count(self):
+        """Actualiza el contador de tiendas seleccionadas."""
+        self.count_label.config(text=self._get_count_text())
+    
+    def _on_accept(self):
+        """Maneja el clic en Aceptar."""
+        selected = [bot_file for bot_file, var in self.checkboxes.items() if var.get()]
+        
+        if not selected:
+            messagebox.showwarning(
+                "Sin selección",
+                "Debes seleccionar al menos una tienda para actualizar.",
+                parent=self
+            )
+            return
+        
+        self.result = selected
+        self.destroy()
+    
+    def _on_cancel(self):
+        """Maneja el clic en Cancelar."""
+        self.result = None
+        self.destroy()
 
 # =============================================================================
 # CLASE 3: INTERFAZ GRÁFICA (Solo UI)
@@ -834,18 +1047,40 @@ class EasyFindApp:
     def action_start_update(self):
         """Inicia la actualización masiva de bases de datos.
         
-        Solicita confirmación al usuario antes de iniciar la actualización.
-        Si se confirma, resetea la UI y lanza un thread para ejecutar
-        los bots recolectores en paralelo.
+        Muestra un diálogo de selección para que el usuario elija qué tiendas
+        actualizar. Si se confirma la selección, resetea la UI y lanza un thread
+        para ejecutar los bots recolectores seleccionados en paralelo.
         
         Note:
-            - Muestra diálogo de confirmación antes de proceder
+            - Muestra diálogo de selección de tiendas antes de proceder
             - La actualización se ejecuta en un thread daemon separado
             - Delega la lógica de ejecución a BotManager
         """
-        if messagebox.askyesno("Confirmar", "¿Ejecutar actualización masiva de bots?"):
-            self._reset_ui("ACTUALIZACIÓN BD")
-            threading.Thread(target=self.bot_manager.run_update_logic, daemon=True).start()
+        # Buscar todos los archivos de bots disponibles
+        carpeta_bots = "Bots_recolectores"
+        patron = os.path.join(carpeta_bots, "Bot-recolector-*.py")
+        archivos_bots = glob.glob(patron)
+        
+        if not archivos_bots:
+            messagebox.showerror("Error", f"No se encontraron bots en '{carpeta_bots}'.")
+            return
+        
+        # Mostrar diálogo de selección
+        dialog = StoreSelectionDialog(self.root, archivos_bots)
+        self.root.wait_window(dialog)
+        
+        # Si el usuario canceló o no seleccionó nada, no hacer nada
+        if dialog.result is None:
+            return
+        
+        selected_bots = dialog.result
+        
+        # Iniciar actualización con los bots seleccionados
+        self._reset_ui("ACTUALIZACIÓN BD")
+        threading.Thread(
+            target=lambda: self.bot_manager.run_update_logic(selected_bots),
+            daemon=True
+        ).start()
 
     def action_stop(self):
         """Detiene forzosamente la operación en curso.
