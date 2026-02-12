@@ -1,0 +1,41 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+venv/
+env/
+build/
+dist/
+*.spec
+
+# --- Playwright (Evita subir los navegadores instalados) ---
+browsers/
+.playwright/
+
+# --- Archivos de Datos (Ignorar contenido sensible) ---
+Resultado.xlsx
+Resultado_Parcial.xlsx
+Resultado_Interrumpido.xlsx
+PRODUCTOS.xlsx
+
+# Bases de datos de tiendas: Ignorar todo excepto .gitkeep
+TIENDAS/*
+!TIENDAS/.gitkeep
+
+# --- Bots Recolectores (Por defecto ignorados para privacidad) ---
+# Si quieres subir tus bots a GitHub, comenta la siguiente línea (pon un # al inicio)
+Bots_recolectores/*
+!Bots_recolectores/.gitkeep
+
+# --- Temporales de Office y Logs ---
+~$*.xlsx
+*.log
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- IDEs (Opcional) ---
+.vscode/
+.idea/
