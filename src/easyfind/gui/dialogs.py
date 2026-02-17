@@ -9,6 +9,17 @@ import os
 import tkinter as tk
 from tkinter import messagebox
 
+# Paleta de colores
+COLOR_BG         = "#0F172A"
+COLOR_BG_DARK    = "#020617"
+COLOR_CARD       = "#1E293B"
+COLOR_TEXT       = "#E2E8F0"
+COLOR_TEXT_DIM   = "#94A3B8"
+COLOR_GREEN      = "#22C55E"
+COLOR_CYAN       = "#06B6D4"
+COLOR_RED        = "#E11D48"
+COLOR_ACCENT     = "#3B82F6"
+
 
 class StoreSelectionDialog(tk.Toplevel):
     """Una ventana de diálogo modal para seleccionar qué tiendas (bots) actualizar.
@@ -28,6 +39,7 @@ class StoreSelectionDialog(tk.Toplevel):
         self.title("Seleccionar Tiendas a Actualizar")
         self.geometry("500x600")
         self.resizable(False, False)
+        self.configure(bg=COLOR_BG)
 
         self.transient(parent)
         self.grab_set()
@@ -41,34 +53,37 @@ class StoreSelectionDialog(tk.Toplevel):
     def _build_ui(self):
         """Construye la interfaz de usuario del diálogo."""
 
-        header_frame = tk.Frame(self, bg="#f8f9fa", pady=15)
+        header_frame = tk.Frame(self, bg=COLOR_BG, pady=15)
         header_frame.pack(fill=tk.X)
         tk.Label(
             header_frame, 
             text="🏪 Selecciona las tiendas a actualizar",
-            font=("Segoe UI", 14, "bold"),
-            bg="#f8f9fa",
-            fg="#333"
+            font=("Consolas", 14, "bold"),
+            bg=COLOR_BG,
+            fg=COLOR_GREEN
         ).pack()
         tk.Label(
             header_frame,
             text="Marca las tiendas que deseas actualizar",
-            font=("Segoe UI", 9),
-            bg="#f8f9fa",
-            fg="#666"
+            font=("Consolas", 9),
+            bg=COLOR_BG,
+            fg=COLOR_TEXT_DIM
         ).pack()
         
-        btn_frame = tk.Frame(self, pady=10)
+        btn_frame = tk.Frame(self, pady=10, bg=COLOR_BG)
         btn_frame.pack(fill=tk.X, padx=20)
         
         tk.Button(
             btn_frame,
             text="✓ Seleccionar Todas",
             command=self._select_all,
-            bg="#28a745",
-            fg="white",
-            font=("Segoe UI", 9),
+            bg=COLOR_BG_DARK,
+            fg=COLOR_GREEN,
+            font=("Consolas", 9),
             relief=tk.FLAT,
+            highlightbackground=COLOR_GREEN, highlightthickness=1,
+            activebackground="#064E3B", activeforeground="#FFFFFF",
+            cursor="hand2",
             padx=10,
             pady=5
         ).pack(side=tk.LEFT, padx=5)
@@ -77,20 +92,26 @@ class StoreSelectionDialog(tk.Toplevel):
             btn_frame,
             text="✗ Deseleccionar Todas",
             command=self._deselect_all,
-            bg="#dc3545",
-            fg="white",
-            font=("Segoe UI", 9),
+            bg=COLOR_BG_DARK,
+            fg=COLOR_RED,
+            font=("Consolas", 9),
             relief=tk.FLAT,
+            highlightbackground=COLOR_RED, highlightthickness=1,
+            activebackground="#4C0519", activeforeground="#FFFFFF",
+            cursor="hand2",
             padx=10,
             pady=5
         ).pack(side=tk.LEFT, padx=5)
 
-        canvas_frame = tk.Frame(self)
+        canvas_frame = tk.Frame(self, bg=COLOR_BG)
         canvas_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
         
-        canvas = tk.Canvas(canvas_frame, bg="white", highlightthickness=1, highlightbackground="#ddd")
-        scrollbar = tk.Scrollbar(canvas_frame, orient="vertical", command=canvas.yview)
-        scrollable_frame = tk.Frame(canvas, bg="white")
+        canvas = tk.Canvas(canvas_frame, bg=COLOR_CARD, highlightthickness=1,
+                           highlightbackground=COLOR_CYAN)
+        scrollbar = tk.Scrollbar(canvas_frame, orient="vertical", command=canvas.yview,
+                                 bg=COLOR_CARD, troughcolor=COLOR_BG_DARK,
+                                 activebackground=COLOR_CYAN)
+        scrollable_frame = tk.Frame(canvas, bg=COLOR_CARD)
         
         scrollable_frame.bind(
             "<Configure>",
@@ -106,16 +127,17 @@ class StoreSelectionDialog(tk.Toplevel):
             var = tk.BooleanVar(value=True)
             self.checkboxes[bot_file] = var
             
-            cb_frame = tk.Frame(scrollable_frame, bg="white", pady=5)
+            cb_frame = tk.Frame(scrollable_frame, bg=COLOR_CARD, pady=5)
             cb_frame.pack(fill=tk.X, padx=10)
             
             cb = tk.Checkbutton(
                 cb_frame,
                 text=bot_name,
                 variable=var,
-                font=("Segoe UI", 10),
-                bg="white",
-                activebackground="white",
+                font=("Consolas", 10),
+                bg=COLOR_CARD, fg=COLOR_TEXT,
+                activebackground=COLOR_CARD, activeforeground=COLOR_GREEN,
+                selectcolor=COLOR_BG_DARK,
                 anchor="w"
             )
             cb.pack(side=tk.LEFT, fill=tk.X, expand=True)
@@ -126,37 +148,44 @@ class StoreSelectionDialog(tk.Toplevel):
         self.count_label = tk.Label(
             self,
             text=self._get_count_text(),
-            font=("Segoe UI", 9),
-            fg="#666"
+            font=("Consolas", 9),
+            fg=COLOR_TEXT_DIM,
+            bg=COLOR_BG
         )
         self.count_label.pack(pady=5)
 
         for var in self.checkboxes.values():
             var.trace_add("write", lambda *args: self._update_count())
 
-        action_frame = tk.Frame(self, pady=15)
+        action_frame = tk.Frame(self, pady=15, bg=COLOR_BG)
         action_frame.pack(fill=tk.X, padx=20)
         
         tk.Button(
             action_frame,
             text="Aceptar",
             command=self._on_accept,
-            bg="#007bff",
-            fg="white",
-            font=("Segoe UI", 10, "bold"),
-            width=15,
-            height=2
+            bg=COLOR_BG_DARK,
+            fg=COLOR_CYAN,
+            font=("Consolas", 10, "bold"),
+            width=15, height=2,
+            relief=tk.FLAT,
+            highlightbackground=COLOR_CYAN, highlightthickness=2,
+            activebackground="#164E63", activeforeground="#FFFFFF",
+            cursor="hand2"
         ).pack(side=tk.LEFT, padx=5, expand=True)
         
         tk.Button(
             action_frame,
             text="Cancelar",
             command=self._on_cancel,
-            bg="#6c757d",
-            fg="white",
-            font=("Segoe UI", 10, "bold"),
-            width=15,
-            height=2
+            bg=COLOR_BG_DARK,
+            fg=COLOR_TEXT_DIM,
+            font=("Consolas", 10, "bold"),
+            width=15, height=2,
+            relief=tk.FLAT,
+            highlightbackground=COLOR_TEXT_DIM, highlightthickness=1,
+            activebackground=COLOR_CARD, activeforeground="#FFFFFF",
+            cursor="hand2"
         ).pack(side=tk.LEFT, padx=5, expand=True)
     
     def _select_all(self):

@@ -27,6 +27,17 @@ class StoreStrategies:
     
     @staticmethod
     def extract_lk(soup):
+        """Extrae la marca del producto desde la tienda LK/LinkStore.
+        
+        Busca primero en el atributo data-fab del contenedor de producto,
+        luego en el meta tag og:title como fallback.
+        
+        Args:
+            soup: Objeto BeautifulSoup con el HTML parseado.
+        
+        Returns:
+            Optional[str]: Nombre de la marca, o None si no se encuentra.
+        """
         try:
             container = soup.select_one('.pag_detalle')
             if container and container.has_attr('data-fab'):
@@ -44,17 +55,48 @@ class StoreStrategies:
 
     @staticmethod
     def extract_transworld(soup):
+        """Extrae la marca del producto desde Transworld.
+        
+        Busca el enlace de marca en la página del producto.
+        
+        Args:
+            soup: Objeto BeautifulSoup con el HTML parseado.
+        
+        Returns:
+            Optional[str]: Nombre de la marca, o None si no se encuentra.
+        """
         marca_link = soup.select_one('a[href*="/marcas/"]')
         if marca_link: return marca_link.get_text(strip=True)
         return None
 
     @staticmethod
     def extract_intcomex(soup):
+        """Extrae la marca del producto desde Intcomex.
+        
+        Busca el nodo con clase '.marca' en la página del producto.
+        
+        Args:
+            soup: Objeto BeautifulSoup con el HTML parseado.
+        
+        Returns:
+            Optional[str]: Nombre de la marca, o None si no se encuentra.
+        """
         marca_node = soup.select_one('.marca')
         return marca_node.get_text(strip=True) if marca_node else None
 
     @staticmethod
     def extract_compratecno_marca(soup):
+        """Extrae la marca del producto desde Compratecno.
+        
+        Busca en los meta tags itemprop='name' dentro del bloque
+        '.product-manufacturer'.
+        
+        Args:
+            soup: Objeto BeautifulSoup con el HTML parseado.
+        
+        Returns:
+            Optional[str]: Nombre de la marca, o None si no se encuentra.
+        """
         man_node = soup.select_one('.product-manufacturer meta[itemprop="name"]') or \
                    soup.select_one('.product-manufacturer span[itemprop="name"]')
         if man_node: 
@@ -63,6 +105,17 @@ class StoreStrategies:
 
     @staticmethod
     def extract_dartel_price(soup):
+        """Extrae el precio del producto desde Dartel (plataforma VTEX).
+        
+        Intenta extraer el precio desde el JSON del template __STATE__ de VTEX,
+        luego desde selectores CSS de precio, y finalmente desde meta tags.
+        
+        Args:
+            soup: Objeto BeautifulSoup con el HTML parseado.
+        
+        Returns:
+            int: Precio en CLP como entero, 0 si no se encuentra.
+        """
         try:
             template = soup.find('template', attrs={'data-varname': '__STATE__'})
             if template:
@@ -86,6 +139,17 @@ class StoreStrategies:
 
     @staticmethod
     def extract_gobantes_price(soup):
+        """Extrae el precio del producto desde Gobantes (plataforma VTEX).
+        
+        Busca primero en selectores CSS comunes de VTEX, luego en scripts
+        JSON embebidos que contengan la propiedad 'Price'.
+        
+        Args:
+            soup: Objeto BeautifulSoup con el HTML parseado.
+        
+        Returns:
+            int: Precio en CLP como entero, 0 si no se encuentra.
+        """
         for sel in ['.skuBestPrice', '.best-price', '.sales-price', '.precio-oferta', '.product-price']:
             el = soup.select_one(sel)
             if el: return Utils.limpiar_precio_clp(el.get_text())
@@ -98,6 +162,16 @@ class StoreStrategies:
 
     @staticmethod
     def extract_vitel_price(soup):
+        """Extrae el precio del producto desde Vitel (plataforma Magento).
+        
+        Busca en selectores CSS típicos de Magento para precios.
+        
+        Args:
+            soup: Objeto BeautifulSoup con el HTML parseado.
+        
+        Returns:
+            int: Precio en CLP como entero, 0 si no se encuentra.
+        """
         for sel in ['.price', '.regular-price', '.price-box .price']:
             el = soup.select_one(sel)
             if el: return Utils.limpiar_precio_clp(el.get_text())
@@ -105,6 +179,17 @@ class StoreStrategies:
     
     @staticmethod
     def extract_compratecno_price(soup):
+        """Extrae el precio del producto desde Compratecno (plataforma PrestaShop).
+        
+        Busca en selectores CSS de PrestaShop, priorizando el atributo
+        'content' sobre el texto visible.
+        
+        Args:
+            soup: Objeto BeautifulSoup con el HTML parseado.
+        
+        Returns:
+            int: Precio en CLP como entero, 0 si no se encuentra.
+        """
         for sel in ['.current-price span[itemprop="price"]', '.product-price', '#our_price_display']:
             el = soup.select_one(sel)
             if el and el.has_attr('content'): return int(float(el['content']))
@@ -113,7 +198,17 @@ class StoreStrategies:
     
     @staticmethod
     def extract_videovision_price(soup):
-        """Extrae precio USD sin IVA de VideoVision y convierte a CLP automáticamente"""
+        """Extrae precio USD sin IVA de VideoVision y convierte a CLP.
+        
+        Busca el bloque '.bloque-neto' con el precio neto en USD y lo
+        convierte a CLP usando la tasa de cambio global TASA_DOLAR.
+        
+        Args:
+            soup: Objeto BeautifulSoup con el HTML parseado.
+        
+        Returns:
+            int: Precio en CLP como entero, 0 si no se encuentra.
+        """
         try:
             bloque_neto = soup.select_one('.bloque-neto')
             if bloque_neto:
@@ -129,6 +224,14 @@ class StoreStrategies:
 
     @staticmethod
     def get_brand_strategy(domain: str):
+        """Retorna la función de extracción de marca apropiada para el dominio dado.
+        
+        Args:
+            domain (str): Dominio o URL de la tienda.
+        
+        Returns:
+            callable o None: Función de extracción si hay estrategia para el dominio.
+        """
         ESTRATEGIAS_MARCA = {
             'lk.cl': StoreStrategies.extract_lk,
             'linkstore': StoreStrategies.extract_lk,
@@ -142,6 +245,14 @@ class StoreStrategies:
 
     @staticmethod
     def get_price_strategy(domain: str):
+        """Retorna la función de extracción de precio apropiada para el dominio dado.
+        
+        Args:
+            domain (str): Dominio o URL de la tienda.
+        
+        Returns:
+            callable o None: Función de extracción si hay estrategia para el dominio.
+        """
         ESTRATEGIAS_PRECIO = {
             'dartel': StoreStrategies.extract_dartel_price,
             'gobantes': StoreStrategies.extract_gobantes_price,

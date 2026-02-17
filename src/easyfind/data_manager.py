@@ -23,6 +23,20 @@ class DataManager:
     
     @staticmethod
     def cargar_bases_datos(ruta_carpeta: str) -> pd.DataFrame:
+        """Carga y unifica todas las bases de datos de tiendas desde una carpeta.
+        
+        Lee archivos Excel (.xlsx) y CSV (.csv) de la carpeta especificada,
+        extrae las columnas de nombre y URL, y las unifica en un solo DataFrame
+        con el texto normalizado para búsqueda difusa.
+        
+        Args:
+            ruta_carpeta (str): Ruta a la carpeta que contiene los archivos
+                de bases de datos (ej: 'TIENDAS/').
+        
+        Returns:
+            pd.DataFrame: DataFrame unificado con columnas ['Nombre', 'URL', 'Tienda', 'Nombre_Norm'].
+                Retorna DataFrame vacío si no hay archivos válidos.
+        """
         dfs = []
         if not os.path.exists(ruta_carpeta):
             os.makedirs(ruta_carpeta)

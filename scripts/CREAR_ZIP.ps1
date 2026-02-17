@@ -18,7 +18,8 @@ mkdir "$sourceDir\Bots_recolectores" -Force | Out-Null
 echo "[1/4] Copiando ejecutable..."
 if (Test-Path "$rootDir\dist\EasyFind_Suite.exe") {
     Copy-Item "$rootDir\dist\EasyFind_Suite.exe" -Destination $sourceDir
-} else {
+}
+else {
     echo "ERROR: No se encuentra dist\EasyFind_Suite.exe"
     echo "       Ejecuta primero COMPILAR.bat"
     pause
@@ -37,6 +38,12 @@ Copy-Item "$rootDir\Bots_recolectores\*" -Destination "$sourceDir\Bots_recolecto
 echo "[4/4] Copiando PRODUCTOS.xlsx..."
 if (Test-Path "$rootDir\PRODUCTOS.xlsx") {
     Copy-Item "$rootDir\PRODUCTOS.xlsx" -Destination $sourceDir
+}
+
+# 5. Manual de Usuario
+echo "[5/5] Copiando MANUAL_USUARIO.md..."
+if (Test-Path "$rootDir\docs\MANUAL_USUARIO.md") {
+    Copy-Item "$rootDir\docs\MANUAL_USUARIO.md" -Destination $sourceDir
 }
 
 # Crear ZIP
@@ -58,6 +65,7 @@ echo "   - EasyFind_Suite.exe"
 echo "   - TIENDAS/ (bases de datos)"
 echo "   - Bots_recolectores/ (scripts)"
 echo "   - PRODUCTOS.xlsx"
+echo "   - MANUAL_USUARIO.md"
 echo "========================================="
 echo ""
 pause

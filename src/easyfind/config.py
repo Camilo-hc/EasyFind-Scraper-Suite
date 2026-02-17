@@ -38,6 +38,16 @@ else:
 
 
 class Config:
+    """Configuración global del motor EasyFind.
+    
+    Contiene todos los parámetros ajustables del sistema organizados en:
+    - Concurrencia: pestañas simultáneas y límites por dominio.
+    - Umbrales de similitud: niveles de precisión para coincidencia difusa.
+    - Textos de salida: mensajes estándar para el Excel de resultados.
+    - User Agents: rotación de agentes para evitar bloqueos.
+    - Listas de tiendas: configuración de IVA y tiendas solo-marca.
+    - Palabras a ignorar: filtro para el matching de productos.
+    """
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     # --- AJUSTES DE VELOCIDAD Y CONCURRENCIA ---

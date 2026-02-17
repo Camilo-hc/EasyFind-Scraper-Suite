@@ -23,7 +23,23 @@ from . import config as _config_module
 
 
 async def procesar_tarea_segura(sem_global, sem_dominio, scraper, tienda, url, row_idx, metodo_origen):
-    """Wrapper para scraping concurrente con limitación de tasa basada en semáforos."""
+    """Wrapper para scraping concurrente con limitación de tasa basada en semáforos.
+    
+    Envuelve una tarea de scraping individual asegurando que se respeten
+    los límites de concurrencia global y por dominio.
+    
+    Args:
+        sem_global (asyncio.Semaphore): Semáforo global para limitar pestañas totales.
+        sem_dominio (asyncio.Semaphore): Semáforo por dominio para limitar peticiones al mismo sitio.
+        scraper (WebScraper): Instancia del scraper para procesar URLs.
+        tienda (str): Nombre de la tienda siendo procesada.
+        url (str): URL del producto a scrapear.
+        row_idx (int): Índice de la fila en el DataFrame de productos.
+        metodo_origen (str): Nivel de precisión del match ('Alta Precisión', 'Media Precisión', 'Baja Precisión').
+    
+    Returns:
+        tuple: (row_idx, tienda, url, marca, precio, error, metodo_origen)
+    """
     async with sem_global:
         async with sem_dominio:
             await asyncio.sleep(random.uniform(0.5, 2.0))
@@ -32,7 +48,17 @@ async def procesar_tarea_segura(sem_global, sem_dominio, scraper, tienda, url, r
 
 
 async def main(callback_log=None, callback_progress=None, stop_event=None):
-    """Orquestador principal: carga bases de datos, realiza coincidencia de doble precisión y hace scraping de URLs concurrentemente."""
+    """Orquestador principal del motor EasyFind.
+    
+    Carga bases de datos de tiendas, realiza coincidencia de doble precisión
+    para encontrar productos y hace scraping concurrente de URLs para
+    extraer precios y marcas. Genera archivos Excel con los resultados.
+    
+    Args:
+        callback_log (callable, optional): Función callback(mensaje) para enviar mensajes de log a la GUI.
+        callback_progress (callable, optional): Función callback(actual, total) para actualizar la barra de progreso.
+        stop_event (threading.Event, optional): Evento para detener el proceso de forma segura desde la GUI.
+    """
     
     def log(mensaje):
         print(mensaje)

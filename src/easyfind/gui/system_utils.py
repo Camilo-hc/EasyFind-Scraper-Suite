@@ -8,6 +8,7 @@ terminación de procesos) y gestión del ciclo de vida de bots recolectores.
 import os
 import sys
 import glob
+import shutil
 import subprocess
 import threading
 import concurrent.futures
@@ -142,7 +143,16 @@ class BotManager:
         env = os.environ.copy()
         env["PYTHONUNBUFFERED"] = "1"
 
-        executable = sys.executable
+        # Determinar el ejecutable de Python correcto
+        # Cuando se ejecuta desde un .exe empaquetado con PyInstaller,
+        # sys.executable apunta al .exe, no al intérprete de Python.
+        if getattr(sys, 'frozen', False):
+            # Modo empaquetado: Usar el propio ejecutable como intérprete
+            # El __main__.py tiene lógica para manejar argumentos .py
+            executable = sys.executable
+        else:
+            executable = sys.executable
+        
         cmd = [executable, script_path]
 
         proc = None

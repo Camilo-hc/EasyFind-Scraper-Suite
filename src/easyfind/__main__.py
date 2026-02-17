@@ -23,8 +23,13 @@ def main():
             runpy.run_path(script_to_run, run_name="__main__")
         except Exception as e:
             print(f"Error crítico ejecutando script interno: {e}")
-            input("Presiona Enter para salir...")
-        sys.exit(0)
+            import traceback
+            traceback.print_exc()
+            sys.stdout.flush()  # Asegurar que el error se envíe al proceso padre
+        
+        # IMPORTANTE: No usar input() aquí, ya que congela el subproceso
+        # si no hay terminal interactiva (caso PyInstaller --noconsole)
+        sys.exit(1)
     
     # --- INICIO NORMAL DE LA GUI ---
     import tkinter as tk

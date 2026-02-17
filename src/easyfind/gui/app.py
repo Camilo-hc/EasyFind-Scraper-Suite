@@ -20,6 +20,20 @@ from .system_utils import BotManager
 from .dialogs import StoreSelectionDialog
 
 
+# Paleta de colores
+COLOR_BG         = "#0F172A"   # Azul noche profundo
+COLOR_BG_DARK    = "#020617"   # Casi negro (para panels internos)
+COLOR_CARD       = "#1E293B"   # Card / panel intermedio
+COLOR_TEXT       = "#E2E8F0"   # Texto claro principal
+COLOR_TEXT_DIM   = "#94A3B8"   # Texto secundario / dim
+COLOR_GREEN      = "#22C55E"   # Verde neón (Matrix)
+COLOR_CYAN       = "#06B6D4"   # Cian neón
+COLOR_RED        = "#FF1744"   # Rojo neón brillante
+COLOR_DISABLED   = "#334155"   # Botón deshabilitado
+COLOR_ACCENT     = "#3B82F6"   # Azul acento (progress)
+COLOR_FOOTER     = "#6B7280"   # Gris sutil footer
+
+
 class EasyFindApp:
     """Clase principal de la aplicación para la GUI de EasyFind.
 
@@ -38,7 +52,8 @@ class EasyFindApp:
             root (tk.Tk): La instancia de la ventana raíz de Tkinter.
         """
         self.root = root
-        self.root.title("EasyFind - Suite de Precios")
+        self.root.title("EasyFind")
+        self.root.configure(bg=COLOR_BG)
         self._setup_window_geometry()
 
         self.stop_event = threading.Event()
@@ -47,6 +62,9 @@ class EasyFindApp:
 
         self.bot_manager = BotManager(self.message_queue, self.stop_event)
 
+        # Estilo ttk para barras de progreso
+        self._configure_styles()
+
         self._build_header()
         self._build_monitor()
         self._build_progress_area()
@@ -54,6 +72,23 @@ class EasyFindApp:
         self._build_footer()
 
         self.root.after(100, self.check_queue)
+
+    def _configure_styles(self):
+        """Configura estilos ttk personalizados para el tema oscuro."""
+        style = ttk.Style()
+        style.theme_use('default')
+
+        # Barra de progreso global – cian sobre fondo oscuro
+        style.configure("Hacker.Horizontal.TProgressbar",
+                        troughcolor=COLOR_BG_DARK,
+                        background=COLOR_CYAN,
+                        thickness=8)
+
+        # Barra de progreso de bots – verde
+        style.configure("Bot.Horizontal.TProgressbar",
+                        troughcolor=COLOR_BG_DARK,
+                        background=COLOR_GREEN,
+                        thickness=6)
 
     def _setup_window_geometry(self):
         """Configura la geometría de la ventana principal."""
@@ -66,19 +101,26 @@ class EasyFindApp:
 
     def _build_header(self):
         """Construye el encabezado de la aplicación con título y descripción."""
-        frame = tk.Frame(self.root)
-        frame.pack(pady=10)
-        tk.Label(frame, text="🔎 EasyFind Control Panel", font=("Segoe UI", 18, "bold"), fg="#333").pack()
-        tk.Label(frame, text="Actualiza bases de datos y busca precios masivamente.", font=("Segoe UI", 10), fg="#666").pack(pady=2)
+        frame = tk.Frame(self.root, bg=COLOR_BG)
+        frame.pack(pady=(20, 10))
+        tk.Label(frame, text="EasyFind Control Panel",
+                 font=("Consolas", 22, "bold"), fg=COLOR_GREEN, bg=COLOR_BG).pack()
+        tk.Label(frame, text="Actualiza bases de datos y busca precios masivamente.",
+                 font=("Consolas", 10), fg=COLOR_TEXT_DIM, bg=COLOR_BG).pack(pady=4)
 
     def _build_monitor(self):
         """Construye el área de monitoreo."""
-        self.frame_monitor = tk.Frame(self.root)
-        self.frame_monitor.pack(padx=15, pady=5, expand=True, fill='both')
+        self.frame_monitor = tk.Frame(self.root, bg=COLOR_BG)
+        self.frame_monitor.pack(padx=20, pady=5, expand=True, fill='both')
 
-        self.canvas = tk.Canvas(self.frame_monitor, borderwidth=0, background="#f0f0f0")
-        self.frame_bots_container = tk.Frame(self.canvas, background="#f0f0f0")
-        vsb = tk.Scrollbar(self.frame_monitor, orient="vertical", command=self.canvas.yview)
+        self.canvas = tk.Canvas(self.frame_monitor, borderwidth=0,
+                                background=COLOR_CARD, highlightthickness=1,
+                                highlightbackground=COLOR_CYAN)
+        self.frame_bots_container = tk.Frame(self.canvas, background=COLOR_CARD)
+        vsb = tk.Scrollbar(self.frame_monitor, orient="vertical",
+                           command=self.canvas.yview,
+                           bg=COLOR_CARD, troughcolor=COLOR_BG_DARK,
+                           activebackground=COLOR_CYAN)
         
         self.canvas.configure(yscrollcommand=vsb.set)
         vsb.pack(side="right", fill="y")
@@ -87,40 +129,83 @@ class EasyFindApp:
         
         self.frame_bots_container.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
 
-        self.text_area = scrolledtext.ScrolledText(self.root, width=80, height=5, font=("Consolas", 8), state='disabled')
-        self.text_area.pack(padx=15, pady=(0,5), fill='x')
+        # Terminal de logs – fondo negro, texto verde matrix
+        self.text_area = scrolledtext.ScrolledText(
+            self.root, width=80, height=5,
+            font=("Consolas", 9), state='disabled',
+            bg="#000000", fg=COLOR_GREEN,
+            insertbackground=COLOR_GREEN,
+            selectbackground=COLOR_CYAN, selectforeground="#000000",
+            relief=tk.FLAT, bd=0,
+            highlightthickness=1, highlightbackground=COLOR_CYAN)
+        self.text_area.pack(padx=20, pady=(5,5), fill='x')
 
     def _build_progress_area(self):
         """Construye la barra de progreso global y la etiqueta de estado."""
-        frame = tk.Frame(self.root)
+        frame = tk.Frame(self.root, bg=COLOR_BG)
         frame.pack(padx=20, pady=5, fill=tk.X)
-        self.lbl_progreso = tk.Label(frame, text="Sistema listo.", font=("Segoe UI", 9), fg="#444")
+        self.lbl_progreso = tk.Label(frame, text="Sistema listo.",
+                                     font=("Consolas", 9), fg=COLOR_TEXT_DIM, bg=COLOR_BG)
         self.lbl_progreso.pack(anchor="w")
-        self.progress_bar = ttk.Progressbar(frame, orient="horizontal", mode="determinate")
+        self.progress_bar = ttk.Progressbar(frame, orient="horizontal",
+                                            mode="determinate",
+                                            style="Hacker.Horizontal.TProgressbar")
         self.progress_bar.pack(fill=tk.X, pady=2)
 
     def _build_buttons(self):
         """Construye los botones de acción principales."""
-        frame = tk.Frame(self.root, pady=15)
+        frame = tk.Frame(self.root, pady=15, bg=COLOR_BG)
         frame.pack()
-        
-        btn_config = {"font": ("Segoe UI", 11, "bold"), "width": 20, "height": 2}
-        
-        self.btn_actualizar = tk.Button(frame, text="ACTUALIZAR BD", bg="#28a745", fg="white", 
-                                        command=self.action_start_update, **btn_config)
+
+        btn_common = {
+            "font": ("Consolas", 11, "bold"),
+            "width": 20, "height": 2,
+            "relief": tk.FLAT,
+            "cursor": "hand2",
+            "activeforeground": "#FFFFFF",
+        }
+
+        # ── ACTUALIZAR BD  (borde verde neón) ──
+        self.btn_actualizar = tk.Button(
+            frame, text="⚙  ACTUALIZAR BD",
+            bg=COLOR_BG_DARK, fg=COLOR_GREEN,
+            activebackground="#064E3B",
+            highlightbackground=COLOR_GREEN, highlightthickness=2,
+            command=self.action_start_update, **btn_common)
         self.btn_actualizar.pack(side=tk.LEFT, padx=10)
 
-        self.btn_iniciar = tk.Button(frame, text="BUSCAR PRECIOS", bg="#007bff", fg="white", 
-                                     command=self.action_start_search, **btn_config)
+        # ── BUSCAR PRECIOS  (borde cian neón) ──
+        self.btn_iniciar = tk.Button(
+            frame, text="◉  BUSCAR PRECIOS",
+            bg=COLOR_BG_DARK, fg=COLOR_CYAN,
+            activebackground="#164E63",
+            highlightbackground=COLOR_CYAN, highlightthickness=2,
+            command=self.action_start_search, **btn_common)
         self.btn_iniciar.pack(side=tk.LEFT, padx=10)
 
-        self.btn_detener = tk.Button(frame, text="DETENER", bg="#dc3545", fg="white", state="disabled",
-                                     command=self.action_stop, font=("Segoe UI", 11, "bold"), width=15, height=2)
+        # ── DETENER  (borde rojo neón) ──
+        self.btn_detener = tk.Button(
+            frame, text="⏻  DETENER",
+            bg=COLOR_BG_DARK, fg=COLOR_RED,
+            activebackground="#4C0519",
+            highlightbackground=COLOR_RED, highlightthickness=2,
+            state="disabled",
+            command=self.action_stop,
+            font=("Consolas", 11, "bold"),
+            width=15, height=2,
+            relief=tk.FLAT, cursor="hand2")
         self.btn_detener.pack(side=tk.LEFT, padx=10)
 
     def _build_footer(self):
         """Construye el pie de página de la aplicación."""
-        tk.Label(self.root, text="Integración de Bots Recolectores", font=("Segoe UI", 8), fg="#aaa").pack(side=tk.BOTTOM, pady=5)
+        footer = tk.Frame(self.root, bg=COLOR_BG_DARK)
+        footer.pack(side=tk.BOTTOM, fill=tk.X)
+        self.lbl_status = tk.Label(
+            footer,
+            text="Status: Sistema activo. Integración de Bots Recolectores.",
+            font=("Consolas", 9), fg=COLOR_FOOTER, bg=COLOR_BG_DARK,
+            anchor="w", padx=10, pady=4)
+        self.lbl_status.pack(fill=tk.X)
 
     def log(self, mensaje):
         """Añade un mensaje al área de log desplazable."""
@@ -167,16 +252,20 @@ class EasyFindApp:
         if nombre in self.active_bot_widgets: 
             return
         
-        f = tk.Frame(self.frame_bots_container, bg="white", bd=1, relief="solid")
+        f = tk.Frame(self.frame_bots_container, bg=COLOR_BG, bd=0,
+                     highlightthickness=1, highlightbackground=COLOR_CARD)
         f.pack(fill="x", pady=2, padx=5)
         
-        tk.Label(f, text=nombre, font=("Segoe UI", 9, "bold"), width=15, anchor="w", bg="white").pack(side="left", padx=5)
+        tk.Label(f, text=nombre, font=("Consolas", 9, "bold"), width=15,
+                 anchor="w", bg=COLOR_BG, fg=COLOR_CYAN).pack(side="left", padx=5)
         
-        pb = ttk.Progressbar(f, orient="horizontal", mode="indeterminate", length=200)
+        pb = ttk.Progressbar(f, orient="horizontal", mode="indeterminate",
+                             length=200, style="Bot.Horizontal.TProgressbar")
         pb.pack(side="left", padx=5)
         pb.start(10)
         
-        lbl = tk.Label(f, text="Iniciando...", font=("Segoe UI", 9), width=40, anchor="w", bg="white", fg="#555")
+        lbl = tk.Label(f, text="Iniciando...", font=("Consolas", 9), width=40,
+                       anchor="w", bg=COLOR_BG, fg=COLOR_TEXT_DIM)
         lbl.pack(side="left", padx=5, fill="x", expand=True)
 
         self.active_bot_widgets[nombre] = {"frame": f, "status": lbl, "pb": pb}
@@ -193,7 +282,7 @@ class EasyFindApp:
             w = self.active_bot_widgets[nombre]
             w["pb"].stop() 
             w["pb"].config(mode="determinate", value=100)  
-            w["status"].config(text="Finalizado", fg="green")
+            w["status"].config(text="Finalizado", fg=COLOR_GREEN)
 
     def _reset_ui(self, running_title=None):
         """Reinicia el estado de la UI entre modos 'Ejecutando' e 'Inactivo'."""
@@ -210,15 +299,15 @@ class EasyFindApp:
                         pass
                 self.active_bot_widgets.clear()
                 
-                self.btn_iniciar.config(state="disabled", bg="#cccccc")
-                self.btn_actualizar.config(state="disabled", bg="#cccccc")
-                self.btn_detener.config(state="normal", bg="#dc3545", text="DETENER")
+                self.btn_iniciar.config(state="disabled", bg=COLOR_DISABLED, fg=COLOR_TEXT_DIM)
+                self.btn_actualizar.config(state="disabled", bg=COLOR_DISABLED, fg=COLOR_TEXT_DIM)
+                self.btn_detener.config(state="normal", bg=COLOR_BG_DARK, fg=COLOR_RED)
                 self.stop_event.clear()
                 self.log(f"--- INICIANDO: {running_title} ---")
             else:
-                self.btn_iniciar.config(state="normal", bg="#007bff")
-                self.btn_actualizar.config(state="normal", bg="#28a745")
-                self.btn_detener.config(state="disabled")
+                self.btn_iniciar.config(state="normal", bg=COLOR_BG_DARK, fg=COLOR_CYAN)
+                self.btn_actualizar.config(state="normal", bg=COLOR_BG_DARK, fg=COLOR_GREEN)
+                self.btn_detener.config(state="disabled", bg=COLOR_DISABLED, fg=COLOR_TEXT_DIM)
                 self.lbl_progreso.config(text="Esperando orden...")
                 self.progress_bar['value'] = 0
                 self.log("--- PROCESO FINALIZADO ---")
